@@ -279,20 +279,24 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const existing = users.find((u) => u.email === email);
+    const user = users.find((u) => u.email === email);
 
-    if (existing) {
-      return res.status(400).json({ error: "User already exists" });
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    const match = await bcrypt.compare(password, user.passwordHash);
 
-    users.push({ email, passwordHash: hash });
+    if (!match) {
+      return res.status(400).json({ error: "Wrong password" });
+    }
 
-    return res.status(201).json({ message: "User registered!" });
+    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
+
+    return res.json({ token });
   } catch (err) {
-    console.error("Register error:", err);
-    return res.status(500).json({ error: "Server error during register" });
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Server error during login" });
   }
 });
 
